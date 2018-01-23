@@ -1,0 +1,6 @@
+Debug/
+Release/
+.vs/
+*.aps
+*.opendb
+*.db

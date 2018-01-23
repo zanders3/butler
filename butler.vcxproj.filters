@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Image Include="blue.ico" />
+    <Image Include="green.ico" />
+    <Image Include="red.ico" />
+    <Image Include="refresh.ico" />
+    <Image Include="settings.ico" />
+    <Image Include="gray.ico" />
+    <Image Include="gray-building.ico" />
+    <Image Include="green-building.ico" />
+    <Image Include="red-building.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="tinyxml2.h" />
+    <ClInclude Include="curl_http.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="Resource.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="tinyxml2.cpp" />
+    <ClCompile Include="curl_http.cpp" />
+  </ItemGroup>
+</Project>
