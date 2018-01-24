@@ -10,6 +10,37 @@
       <Platform>Win32</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="icons\gray-building.ico" />
+    <Image Include="icons\gray.ico" />
+    <Image Include="icons\green-building.ico" />
+    <Image Include="icons\green.ico" />
+    <Image Include="icons\red-building.ico" />
+    <Image Include="icons\red.ico" />
+    <Image Include="icons\refresh.ico" />
+    <Image Include="icons\settings.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\curl_http.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\tinyxml2.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\curl\curl.h" />
+    <ClInclude Include="src\curl\curlver.h" />
+    <ClInclude Include="src\curl\easy.h" />
+    <ClInclude Include="src\curl\mprintf.h" />
+    <ClInclude Include="src\curl\multi.h" />
+    <ClInclude Include="src\curl\stdcheaders.h" />
+    <ClInclude Include="src\curl\system.h" />
+    <ClInclude Include="src\curl\typecheck-gcc.h" />
+    <ClInclude Include="src\curl_http.h" />
+    <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\tinyxml2.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\Resource.rc" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{C6E6443A-800F-4579-8972-4FF16F33ED69}</ProjectGuid>
     <RootNamespace>butler</RootNamespace>
@@ -50,7 +81,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)curl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)src\curl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -65,33 +96,10 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies);</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(ProjectDir)curl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(ProjectDir)src\curl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <SubSystem>NotSet</SubSystem>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="curl_http.cpp" />
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="tinyxml2.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Image Include="blue.ico" />
-    <Image Include="gray-building.ico" />
-    <Image Include="gray.ico" />
-    <Image Include="green-building.ico" />
-    <Image Include="green.ico" />
-    <Image Include="red-building.ico" />
-    <Image Include="red.ico" />
-    <Image Include="refresh.ico" />
-    <Image Include="settings.ico" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="curl_http.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="tinyxml2.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Resource.rc" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

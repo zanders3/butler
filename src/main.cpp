@@ -1,5 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #define WIN32_LEAN_AND_MEAN
+#define UNICODE
+#define _UNICODE
 #include <Windows.h>
 #include <CommCtrl.h>
 #include <Uxtheme.h>
@@ -7,6 +9,7 @@
 #include <tchar.h>
 #include <time.h>
 #include <vector>
+#include <codecvt>
 #include "resource.h"
 
 #include "curl_http.h"
@@ -36,7 +39,7 @@ enum class BuildState
 
 struct Project
 {
-    std::string name, webUrl;
+    std::wstring name, webUrl;
     BuildState lastBuildStatus;
     ProjectActivity activity;
     int lastBuildLabel;
@@ -45,9 +48,11 @@ struct Project
 enum class BuildIcons {
     Gray, GrayBuilding, Green, GreenBuilding, Red, RedBuilding, Count
 };
-const char* gBuildIconNames[(int)BuildIcons::Count] = {
-    "Unknown", "Building", "All Successful", "Building", "Build Failed", "Building"
+const wchar_t* gBuildIconNames[(int)BuildIcons::Count] = {
+    L"Unknown", L"Building", L"All Successful", L"Building", L"Build Failed", L"Building"
 };
+
+std::wstring_convert<std::codecvt_utf8<wchar_t>> unicode;
 
 struct Settings {
     void LoadSettings() {
@@ -64,13 +69,13 @@ struct Settings {
                 int len = strnlen(val, sizeof(line));
                 val[len - 1] = '\0';
                 if (strcmp(line, "url") == 0) {
-                    url.assign(val);
+                    url.assign(unicode.from_bytes(val));
                 }
                 else if (strcmp(line, "name") == 0) {
-                    name.assign(val);
+                    name.assign(unicode.from_bytes(val));
                 }
                 else if (strcmp(line, "password") == 0) {
-                    password.assign(val);
+                    password.assign(unicode.from_bytes(val));
                 }
             }
         }
@@ -81,27 +86,27 @@ struct Settings {
         FILE* file = fopen("settings.ini", "wt");
         if (!file)
             return;
-        fprintf(file, "url=%s\nname=%s\npassword=%s\n", url.c_str(), name.c_str(), password.c_str());
+        fprintf(file, "url=%s\nname=%s\npassword=%s\n", unicode.to_bytes(url).c_str(), unicode.to_bytes(name).c_str(), unicode.to_bytes(password).c_str());
         fclose(file);
     }
 
-    std::string url, name, password;
+    std::wstring url, name, password;
 };
 
 HINSTANCE ghInst;
 HWND gMainWindow;
 HICON gIconSettings;
 HICON gBuildIcons[(int)BuildIcons::Count];
-char gStatusText[1024];
+wchar_t gStatusText[1024];
 HttpRequest* gCurrentPoll = nullptr;
 std::vector<Project> gProjects;
 Settings gSettings;
 bool gWindowVisible = false;
 
 template<size_t count, typename... Args>
-static void sprintf_safe(char(&output)[count], const char* format, Args... args)
+static void sprintf_safe(wchar_t(&output)[count], const wchar_t* format, Args... args)
 {
-    snprintf(output, count, format, args...);
+    swprintf(output, count, format, args...);
 }
 
 void SetPollTimer(int delay_ms = 60 * 1000);
@@ -120,7 +125,7 @@ INT_PTR CALLBACK SettingsWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARA
         {
         case IDC_OK:
         {
-            char url[1024] = {};
+            wchar_t url[1024] = {};
             GetWindowText(GetDlgItem(hDlg, IDC_SERVERPATH), url, sizeof(url));
             gSettings.url.assign(url);
             gSettings.WriteSettings();
@@ -172,7 +177,9 @@ static void SetWindowVisible(bool visible)
 
         int w = (window_pos.right - window_pos.left), h = (window_pos.bottom - window_pos.top);
 
-        SetWindowPos(gMainWindow, HWND_TOP, icon_pos.left - w / 2, icon_pos.top - h, w, h, SWP_SHOWWINDOW);
+        SetWindowPos(gMainWindow, HWND_TOP, icon_pos.left - w / 2 + 16, icon_pos.top - h, w, h, SWP_SHOWWINDOW);
+        SetForegroundWindow(gMainWindow);
+        SetFocus(gMainWindow);
     }
     else {
         ShowWindow(gMainWindow, SW_HIDE);
@@ -256,6 +263,10 @@ INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
             DestroyMenu(hMenu);
         }
         break;
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_INACTIVE)
+            SetWindowVisible(false);
+        break;
     case WM_CLOSE:
         SetWindowVisible(false);
         return TRUE;
@@ -277,8 +288,8 @@ static bool ParseProjects(const char* data, size_t len, std::vector<Project>& pr
 
     for (tinyxml2::XMLElement* proj = proj_xml->FirstChildElement("Project"); proj; proj = proj->NextSiblingElement("Project")) {
         Project project;
-        project.name = std::string(proj->Attribute("name"));
-        project.webUrl = std::string(proj->Attribute("webUrl"));
+        project.name = unicode.from_bytes(proj->Attribute("name"));
+        project.webUrl = unicode.from_bytes(proj->Attribute("webUrl"));
         project.lastBuildLabel = proj->IntAttribute("lastBuildLabel");
         const char* activity = proj->Attribute("activity");
         if (!activity) activity = "";
@@ -311,9 +322,9 @@ static void SetProjects(const std::vector<Project>& projects)
     item.cchTextMax = 40;
     item.mask = LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM;
     BuildIcons bestIcon = BuildIcons::Gray;
-    std::string tipText;
+    std::wstring tipText;
     for (const Project& proj : projects) {
-        item.pszText = (char*)proj.name.data();
+        item.pszText = (wchar_t*)proj.name.data();
         item.lParam = (LPARAM)&proj;
         if (proj.lastBuildStatus == BuildState::Failure)
             item.iImage = proj.activity == ProjectActivity::Building ? (int)BuildIcons::RedBuilding : (int)BuildIcons::Red;
@@ -326,10 +337,10 @@ static void SetProjects(const std::vector<Project>& projects)
             bestIcon = (BuildIcons)item.iImage;
         }
         if (proj.activity == ProjectActivity::Building) {
-            tipText.append(proj.name); tipText.append(" Building\n");
+            tipText.append(proj.name); tipText.append(L" Building\n");
         }
         if (proj.lastBuildStatus == BuildState::Failure) {
-            tipText.append(proj.name); tipText.append(" Failed\n");
+            tipText.append(proj.name); tipText.append(L" Failed\n");
         }
 
         ListView_InsertItem(hLst, &item);
@@ -345,13 +356,13 @@ static void SetProjects(const std::vector<Project>& projects)
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     nid.uCallbackMessage = APPWM_ICONNOTIFY;
     nid.hIcon = gBuildIcons[(int)bestIcon];
-    sprintf_safe(nid.szTip, "%s", tipText.c_str());
+    sprintf_safe(nid.szTip, L"%s", tipText.c_str());
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
-    SetClassLong(gMainWindow, GCL_HICON, (LONG)bestIcon);
+    SetClassLong(gMainWindow, GCL_HICON, (LONG)gBuildIcons[(int)bestIcon]);
 }
 
-static void SetStatus(const char* msg)
+static void SetStatus(const wchar_t* msg)
 {
     SetDlgItemText(gMainWindow, IDC_STATUS, msg);
     RedrawWindow(gMainWindow, nullptr, nullptr, RDW_INVALIDATE);
@@ -360,9 +371,9 @@ static void SetStatus(const char* msg)
 static void CALLBACK PollServerTimer(HWND hWnd, UINT msg, UINT_PTR idEvent, DWORD dwTime)
 {
     if (!gCurrentPoll) {
-        sprintf_safe(gStatusText, "Fetching %s", gSettings.url.c_str());
+        sprintf_safe(gStatusText, L"Fetching %s", gSettings.url.c_str());
         SetStatus(gStatusText);
-        gCurrentPoll = http_get(gSettings.url.c_str());
+        gCurrentPoll = http_get(unicode.to_bytes(gSettings.url).c_str());
         SetPollTimer(100);
     }
     else {
@@ -373,14 +384,14 @@ static void CALLBACK PollServerTimer(HWND hWnd, UINT msg, UINT_PTR idEvent, DWOR
                     SetProjects(gProjects);
                     time_t currentTime = time(nullptr);
                     tm* timeinfo = localtime(&currentTime);
-                    strftime(gStatusText, sizeof(gStatusText), "Refreshed at %H:%M:%S", timeinfo);
+                    wcsftime(gStatusText, sizeof(gStatusText), L"Refreshed at %H:%M:%S", timeinfo);
                     SetStatus(gStatusText);
                 }
                 else
-                    SetStatus("Failed to parse response!");
+                    SetStatus(L"Failed to parse response!");
             }
             else {
-                sprintf_safe(gStatusText, "Failed %d: %s", gCurrentPoll->status_code, (const char*)gCurrentPoll->response_data);
+                sprintf_safe(gStatusText, L"Failed %d: %s", gCurrentPoll->status_code, (const char*)gCurrentPoll->response_data);
                 SetStatus(gStatusText);
             }
             http_release(gCurrentPoll);
@@ -428,7 +439,7 @@ int WINAPI _tWinMain(HINSTANCE hInst, HINSTANCE h0, LPTSTR lpCmdLine, int nCmdSh
         col.fmt = LVCFMT_IMAGE | LVCFMT_FILL | LVCFMT_RIGHT;
         col.mask = LVCF_FMT | LVCF_TEXT | LVCF_WIDTH;
         col.cx = 258;
-        col.pszText = "Name";
+        col.pszText = L"Name";
         ListView_InsertColumn(hLst, 0, &col);
 
         ListView_SetView(hLst, LV_VIEW_DETAILS);
@@ -447,7 +458,8 @@ int WINAPI _tWinMain(HINSTANCE hInst, HINSTANCE h0, LPTSTR lpCmdLine, int nCmdSh
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
         nid.uCallbackMessage = APPWM_ICONNOTIFY;
         nid.hIcon = gBuildIcons[(int)BuildIcons::Gray];
-        sprintf_safe(nid.szTip, "Butler: Fetching");
+        const wchar_t* fmt = L"Butler: Fetching";
+        sprintf_safe(nid.szTip, fmt);
         Shell_NotifyIcon(NIM_ADD, &nid);
     }
 

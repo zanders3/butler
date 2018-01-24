@@ -1,50 +1,91 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Image Include="gray.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="gray-building.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="green.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="green-building.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="blue.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="red.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="red-building.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="refresh.ico">
-      <Filter>icons</Filter>
-    </Image>
-    <Image Include="settings.ico">
-      <Filter>icons</Filter>
-    </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="tinyxml2.h" />
-    <ClInclude Include="curl_http.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="Resource.rc" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="main.cpp" />
-    <ClCompile Include="tinyxml2.cpp" />
-    <ClCompile Include="curl_http.cpp" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="icons">
       <UniqueIdentifier>{cd4f6985-2fdb-487f-adcb-99100f5ae6a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{c3acaf02-aaa6-4059-8cac-e74c6704cd49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\curl">
+      <UniqueIdentifier>{e0bad76f-038e-4611-835f-4152d76d37b9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="icons\gray.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\gray-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\green.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\green-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\red.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\red-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\refresh.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="icons\settings.ico">
+      <Filter>icons</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\curl_http.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tinyxml2.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\curl_http.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\resource.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tinyxml2.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\curl.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\curlver.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\easy.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\mprintf.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\multi.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\stdcheaders.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\system.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+    <ClInclude Include="src\curl\typecheck-gcc.h">
+      <Filter>src\curl</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="src\Resource.rc">
+      <Filter>src</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
