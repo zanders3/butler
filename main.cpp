@@ -49,17 +49,54 @@ const char* gBuildIconNames[(int)BuildIcons::Count] = {
     "Unknown", "Building", "All Successful", "Building", "Build Failed", "Building"
 };
 
+struct Settings {
+    void LoadSettings() {
+        FILE* file = fopen("settings.ini", "rt");
+        if (!file)
+            return;
+
+        char line[2048];
+        while (fgets(line, sizeof(line), file)) {
+            char* eq = strchr(line, '=');
+            if (eq) {
+                *eq = '\0';
+                char* val = eq + 1;
+                int len = strnlen(val, sizeof(line));
+                val[len - 1] = '\0';
+                if (strcmp(line, "url") == 0) {
+                    url.assign(val);
+                }
+                else if (strcmp(line, "name") == 0) {
+                    name.assign(val);
+                }
+                else if (strcmp(line, "password") == 0) {
+                    password.assign(val);
+                }
+            }
+        }
+        fclose(file);
+    }
+
+    void WriteSettings() {
+        FILE* file = fopen("settings.ini", "wt");
+        if (!file)
+            return;
+        fprintf(file, "url=%s\nname=%s\npassword=%s\n", url.c_str(), name.c_str(), password.c_str());
+        fclose(file);
+    }
+
+    std::string url, name, password;
+};
+
 HINSTANCE ghInst;
 HWND gMainWindow;
 HICON gIconSettings;
 HICON gBuildIcons[(int)BuildIcons::Count];
-BuildIcons gBestIcon;
-char gServerPath[512];
 char gStatusText[1024];
-time_t gNextPollTime = 0, gLastPollTime = 0;
 HttpRequest* gCurrentPoll = nullptr;
 std::vector<Project> gProjects;
-bool gWindowVisible = true;
+Settings gSettings;
+bool gWindowVisible = false;
 
 template<size_t count, typename... Args>
 static void sprintf_safe(char(&output)[count], const char* format, Args... args)
@@ -67,21 +104,29 @@ static void sprintf_safe(char(&output)[count], const char* format, Args... args)
     snprintf(output, count, format, args...);
 }
 
+void SetPollTimer(int delay_ms = 60 * 1000);
+
 INT_PTR CALLBACK SettingsWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
     case WM_INITDIALOG:
-        SetWindowText(GetDlgItem(hDlg, IDC_SERVERPATH), gServerPath);
+        SetWindowText(GetDlgItem(hDlg, IDC_SERVERPATH), gSettings.url.c_str());
+        Edit_SetCueBannerText(GetDlgItem(hDlg, IDC_SERVERPATH), L"http://jenkins/cc.xml");
         SendMessage(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)gIconSettings);
         break;
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
         case IDC_OK:
-            GetWindowText(GetDlgItem(hDlg, IDC_SERVERPATH), gServerPath, sizeof(gServerPath));
-            gNextPollTime = 0;
+        {
+            char url[1024] = {};
+            GetWindowText(GetDlgItem(hDlg, IDC_SERVERPATH), url, sizeof(url));
+            gSettings.url.assign(url);
+            gSettings.WriteSettings();
+            SetPollTimer(1);
             EndDialog(hDlg, 0);
+        }
             break;
         case IDC_CANCEL:
             EndDialog(hDlg, 0);
@@ -110,6 +155,30 @@ static Project* GetSelectedProject()
     return (Project*)item.lParam;
 }
 
+static void SetWindowVisible(bool visible)
+{
+    if (visible == gWindowVisible)
+        return;
+    gWindowVisible = visible;
+    if (visible) {
+        NOTIFYICONIDENTIFIER id{};
+        id.cbSize = sizeof(NOTIFYICONIDENTIFIER);
+        id.hWnd = gMainWindow;
+        id.uID = 1;
+        RECT icon_pos;
+        Shell_NotifyIconGetRect(&id, &icon_pos);
+        RECT window_pos;
+        GetWindowRect(gMainWindow, &window_pos);
+
+        int w = (window_pos.right - window_pos.left), h = (window_pos.bottom - window_pos.top);
+
+        SetWindowPos(gMainWindow, HWND_TOP, icon_pos.left - w / 2, icon_pos.top - h, w, h, SWP_SHOWWINDOW);
+    }
+    else {
+        ShowWindow(gMainWindow, SW_HIDE);
+    }
+}
+
 INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
@@ -129,8 +198,7 @@ INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
             //TODO LOL
             break;
         case ID_CONTEXT_OPENBUTLER:
-            ShowWindow(gMainWindow, SW_SHOW);
-            gWindowVisible = true;
+            SetWindowVisible(true);
             break;
         case ID_CONTEXT_EXIT:
             PostQuitMessage(0);
@@ -139,7 +207,7 @@ INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
             DialogBox(ghInst, MAKEINTRESOURCE(IDD_SETTINGS), hDlg, SettingsWindowDialog);
             break;
         case IDC_REFRESH:
-            gNextPollTime = 0;
+            SetPollTimer(1);
             break;
         }
         break;
@@ -173,8 +241,7 @@ INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
         break;
     case APPWM_ICONNOTIFY:
         if (lParam == WM_LBUTTONUP) {
-            ShowWindow(gMainWindow, gWindowVisible ? SW_HIDE : SW_SHOW);
-            gWindowVisible = !gWindowVisible;
+            SetWindowVisible(!gWindowVisible);
         }
         else if (lParam == WM_RBUTTONUP) {
             HMENU hMenu = LoadMenu(ghInst, MAKEINTRESOURCE(IDR_TRAY_CONTEXT_MENU));
@@ -190,8 +257,7 @@ INT_PTR CALLBACK MainWindowDialog(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lP
         }
         break;
     case WM_CLOSE:
-        ShowWindow(gMainWindow, SW_HIDE);
-        gWindowVisible = false;
+        SetWindowVisible(false);
         return TRUE;
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -245,6 +311,7 @@ static void SetProjects(const std::vector<Project>& projects)
     item.cchTextMax = 40;
     item.mask = LVIF_IMAGE | LVIF_TEXT | LVIF_PARAM;
     BuildIcons bestIcon = BuildIcons::Gray;
+    std::string tipText;
     for (const Project& proj : projects) {
         item.pszText = (char*)proj.name.data();
         item.lParam = (LPARAM)&proj;
@@ -255,34 +322,77 @@ static void SetProjects(const std::vector<Project>& projects)
         else
             item.iImage = proj.activity == ProjectActivity::Building ? (int)BuildIcons::GrayBuilding : (int)BuildIcons::Gray;
 
-        if (item.iImage > (int)bestIcon)
+        if (item.iImage >= (int)bestIcon) {
             bestIcon = (BuildIcons)item.iImage;
+        }
+        if (proj.activity == ProjectActivity::Building) {
+            tipText.append(proj.name); tipText.append(" Building\n");
+        }
+        if (proj.lastBuildStatus == BuildState::Failure) {
+            tipText.append(proj.name); tipText.append(" Failed\n");
+        }
 
         ListView_InsertItem(hLst, &item);
     }
+    if (tipText.size() == 0) {
+        tipText.assign(gBuildIconNames[(int)bestIcon]);
+    }
 
-    gBestIcon = bestIcon;
-}
-
-static void SetStatus(const char* msg)
-{
     NOTIFYICONDATA nid = {};
     nid.cbSize = sizeof(NOTIFYICONDATA);
     nid.hWnd = gMainWindow;
     nid.uID = 1;
     nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
     nid.uCallbackMessage = APPWM_ICONNOTIFY;
-    nid.hIcon = gBuildIcons[(int)gBestIcon];
-
-    sprintf_safe(nid.szTip, "Butler: %s\n%s", gBuildIconNames[(int)gBestIcon], msg);
+    nid.hIcon = gBuildIcons[(int)bestIcon];
+    sprintf_safe(nid.szTip, "%s", tipText.c_str());
 
     Shell_NotifyIcon(NIM_MODIFY, &nid);
-    SetClassLong(gMainWindow, GCL_HICON, (LONG)gBestIcon);
-    SendMessage(gMainWindow, WM_SETICON, ICON_BIG, (LPARAM)gBestIcon);
-    SendMessage(gMainWindow, WM_SETICON, ICON_SMALL, (LPARAM)gBestIcon);
+    SetClassLong(gMainWindow, GCL_HICON, (LONG)bestIcon);
+}
 
+static void SetStatus(const char* msg)
+{
     SetDlgItemText(gMainWindow, IDC_STATUS, msg);
     RedrawWindow(gMainWindow, nullptr, nullptr, RDW_INVALIDATE);
+}
+
+static void CALLBACK PollServerTimer(HWND hWnd, UINT msg, UINT_PTR idEvent, DWORD dwTime)
+{
+    if (!gCurrentPoll) {
+        sprintf_safe(gStatusText, "Fetching %s", gSettings.url.c_str());
+        SetStatus(gStatusText);
+        gCurrentPoll = http_get(gSettings.url.c_str());
+        SetPollTimer(100);
+    }
+    else {
+        HttpStatus t = http_process(gCurrentPoll);
+        if (t != HttpStatus::Pending) {
+            if (t == HttpStatus::Completed) {
+                if (ParseProjects(gCurrentPoll->response_data, gCurrentPoll->response_data_len, gProjects)) {
+                    SetProjects(gProjects);
+                    time_t currentTime = time(nullptr);
+                    tm* timeinfo = localtime(&currentTime);
+                    strftime(gStatusText, sizeof(gStatusText), "Refreshed at %H:%M:%S", timeinfo);
+                    SetStatus(gStatusText);
+                }
+                else
+                    SetStatus("Failed to parse response!");
+            }
+            else {
+                sprintf_safe(gStatusText, "Failed %d: %s", gCurrentPoll->status_code, (const char*)gCurrentPoll->response_data);
+                SetStatus(gStatusText);
+            }
+            http_release(gCurrentPoll);
+            gCurrentPoll = nullptr;
+            SetPollTimer();
+        }
+    }
+}
+
+void SetPollTimer(int delay_ms)
+{
+    SetTimer(gMainWindow, 1, delay_ms, PollServerTimer);
 }
 
 int WINAPI _tWinMain(HINSTANCE hInst, HINSTANCE h0, LPTSTR lpCmdLine, int nCmdShow)
@@ -307,8 +417,6 @@ int WINAPI _tWinMain(HINSTANCE hInst, HINSTANCE h0, LPTSTR lpCmdLine, int nCmdSh
     }
 
     //Set the gray icon onto the window whilst we ask for build state
-    SendMessage(gMainWindow, WM_SETICON, ICON_BIG, (LPARAM)gBuildIcons[(int)BuildIcons::Gray]);
-    SendMessage(gMainWindow, WM_SETICON, ICON_SMALL, (LPARAM)gBuildIcons[(int)BuildIcons::Gray]);
     SetClassLong(gMainWindow, GCL_HICON, (LONG)gBuildIcons[(int)BuildIcons::Gray]);
 
     //Setup builds list view styles etc
@@ -343,43 +451,19 @@ int WINAPI _tWinMain(HINSTANCE hInst, HINSTANCE h0, LPTSTR lpCmdLine, int nCmdSh
         Shell_NotifyIcon(NIM_ADD, &nid);
     }
 
-    sprintf_safe(gServerPath, "https://builds.apache.org/cc.xml");
+    //Loads settings
+    gSettings.LoadSettings();
+    if (gSettings.url.size() <= 0) {
+        DialogBox(ghInst, MAKEINTRESOURCE(IDD_SETTINGS), gMainWindow, SettingsWindowDialog);
+    }
+    else
+        SetPollTimer(1);
 
+    SetWindowVisible(true);
+
+    //Message loop
     MSG msg;
     while (GetMessage(&msg, 0, 0, 0)) {
-        //Update messages
-        if (gCurrentPoll) {
-            HttpStatus t = http_process(gCurrentPoll);
-            if (t != HttpStatus::Pending) {
-                gLastPollTime = time(nullptr);
-                gNextPollTime = gLastPollTime + 60;
-                if (t == HttpStatus::Completed) {
-                    if (ParseProjects(gCurrentPoll->response_data, gCurrentPoll->response_data_len, gProjects)) {
-                        SetProjects(gProjects);
-                        tm* timeinfo = localtime(&gLastPollTime);
-                        strftime(gStatusText, sizeof(gStatusText), "Refreshed at %H:%M:%S", timeinfo);
-                        SetStatus(gStatusText);
-                    }
-                    else
-                        SetStatus("Failed to parse response!");
-                }
-                else {
-                    sprintf_safe(gStatusText, "Failed %d: %s", gCurrentPoll->status_code, (const char*)gCurrentPoll->response_data);
-                    SetStatus(gStatusText);
-                }
-                http_release(gCurrentPoll);
-                gCurrentPoll = nullptr;
-            }
-        }
-        else {
-            time_t currentTime = time(nullptr);
-            if (currentTime >= gNextPollTime) {
-                sprintf_safe(gStatusText, "Fetching %s", gServerPath);
-                SetStatus(gStatusText);
-                gCurrentPoll = http_get(gServerPath);
-            }
-        }
-
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }

@@ -1,15 +1,33 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Image Include="blue.ico" />
-    <Image Include="green.ico" />
-    <Image Include="red.ico" />
-    <Image Include="refresh.ico" />
-    <Image Include="settings.ico" />
-    <Image Include="gray.ico" />
-    <Image Include="gray-building.ico" />
-    <Image Include="green-building.ico" />
-    <Image Include="red-building.ico" />
+    <Image Include="gray.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="gray-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="green.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="green-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="blue.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="red.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="red-building.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="refresh.ico">
+      <Filter>icons</Filter>
+    </Image>
+    <Image Include="settings.ico">
+      <Filter>icons</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
@@ -23,5 +41,10 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="tinyxml2.cpp" />
     <ClCompile Include="curl_http.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="icons">
+      <UniqueIdentifier>{cd4f6985-2fdb-487f-adcb-99100f5ae6a1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
 </Project>
