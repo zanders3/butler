@@ -7,8 +7,8 @@ A really simple Jenkins build notification app for Windows. Keep an eye on your 
 Setup
 =====
 
-Either [Download](https://github.com/zanders3/butler/releases) the latest exe or open `butler.sln` in Visual Studio 2015 and press F5.
+Either [Download](https://github.com/zanders3/butler/releases) and run the latest exe or open `butler.sln` in Visual Studio 2015 and press F5.
 
-The settings screen will then ask for the HTTP path to your Jenkin's cc.xml e.g. `http://jenkins/cc.xml`.
+The settings screen will then ask for the HTTP path to your Jenkin's cc.xml e.g. `http://jenkins/cc.xml`. Settings are stored in a `settings.ini` alongside the exe.
 
 ![Settings](https://github.com/zanders3/butler/blob/master/settings.png "Settings")
